@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二進数⇔カラー画像変換</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        h2 {
+            color: #667eea;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            font-family: monospace;
+        }
+        .color-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .color-input input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .color-input span {
+            flex: 1;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        canvas {
+            border: 2px solid #667eea;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: block;
+        }
+        #preview {
+            text-align: center;
+        }
+        .file-input {
+            margin: 10px 0;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .detected-info {
+            background: #f1f8e9;
+            border-left: 4px solid #8bc34a;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 二進数⇔カラー画像変換ツール</h1>
+
+        <!-- エンコード（二進数→画像） -->
+        <div class="section">
+            <h2>📝 エンコード（二進数→画像）</h2>
+            
+            <div class="info-box">
+                <h3>📋 画像形式の説明</h3>
+                <p><strong>最初の5ブロック（ヘッダー）:</strong></p>
+                <ul>
+                    <li>1つ目: 横幅指定（10px=白, 15px=黒, 20px=紫, 25px=青, 30px=緑）</li>
+                    <li>2つ目: 00に対応する色</li>
+                    <li>3つ目: 01に対応する色</li>
+                    <li>4つ目: 11に対応する色</li>
+                    <li>5つ目: 10に対応する色</li>
+                    <li>スペース: 設定した色（ヘッダーには含まれません）</li>
+                </ul>
+                <p><strong>6ブロック目以降:</strong> 実際のデータ</p>
+            </div>
+
+            <label>二進数を入力（0, 1, スペース）:</label>
+            <textarea id="binaryInput" placeholder="例: 00 01 11 10 00"></textarea>
+
+            <label>横幅（px）:</label>
+            <select id="widthSelect">
+                <option value="10">10px (白)</option>
+                <option value="15">15px (黒)</option>
+                <option value="20">20px (紫)</option>
+                <option value="25">25px (青)</option>
+                <option value="30">30px (緑)</option>
+            </select>
+
+            <label>色設定:</label>
+            <div class="color-input">
+                <span>00 =</span>
+                <input type="color" id="color00" value="#FFFFFF">
+            </div>
+            <div class="color-input">
+                <span>01 =</span>
+                <input type="color" id="color01" value="#FF0000">
+            </div>
+            <div class="color-input">
+                <span>11 =</span>
+                <input type="color" id="color11" value="#000000">
+            </div>
+            <div class="color-input">
+                <span>10 =</span>
+                <input type="color" id="color10" value="#0000FF">
+            </div>
+            <div class="color-input">
+                <span>スペース =</span>
+                <input type="color" id="colorSpace" value="#00FF00">
+            </div>
+
+            <button onclick="encode()">🖼️ 画像を生成</button>
+            <button onclick="downloadImage()">💾 画像をダウンロード</button>
+
+            <div id="preview">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- デコード（画像→二進数） -->
+        <div class="section">
+            <h2>🔍 デコード（画像→二進数）</h2>
+            
+            <label>画像を選択:</label>
+            <input type="file" id="imageFile" accept="image/*" class="file-input" onchange="decode()">
+
+            <div id="detectedInfo" class="detected-info" style="display:none;">
+                <h3>🔎 検出された設定</h3>
+                <p id="detectedWidth"></p>
+                <p id="detectedColors"></p>
+            </div>
+
+            <label>読み取り結果:</label>
+            <textarea id="decodedOutput" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        function encode() {
+            const input = document.getElementById('binaryInput').value;
+            const width = parseInt(document.getElementById('widthSelect').value);
+            const height = 50;
+
+            const colorMap = {
+                '00': document.getElementById('color00').value,
+                '01': document.getElementById('color01').value,
+                '11': document.getElementById('color11').value,
+                '10': document.getElementById('color10').value,
+                ' ': document.getElementById('colorSpace').value
+            };
+
+            // 横幅に応じたヘッダー色を決定
+            const widthColorMap = {
+                10: '#FFFFFF',
+                15: '#000000',
+                20: '#800080',
+                25: '#0000FF',
+                30: '#00FF00'
+            };
+
+            // 入力を処理
+            const chars = input.split('');
+            let blocks = [];
+            let i = 0;
+            
+            while (i < chars.length) {
+                if (chars[i] === ' ') {
+                    blocks.push(' ');
+                    i++;
+                } else if (i + 1 < chars.length) {
+                    blocks.push(chars[i] + chars[i + 1]);
+                    i += 2;
+                } else {
+                    i++;
+                }
+            }
+
+            // ヘッダーブロックを追加（最初の5ブロック）
+            const header = [
+                widthColorMap[width],  // 1. 横幅指定
+                colorMap['00'],         // 2. 00の色
+                colorMap['01'],         // 3. 01の色
+                colorMap['11'],         // 4. 11の色
+                colorMap['10']          // 5. 10の色
+            ];
+
+            // キャンバスサイズ設定（ヘッダー5ブロック + データブロック）
+            canvas.width = (header.length + blocks.length) * width;
+            canvas.height = height;
+
+            // ヘッダーを描画
+            header.forEach((color, index) => {
+                ctx.fillStyle = color;
+                ctx.fillRect(index * width, 0, width, height);
+            });
+
+            // データブロックを描画
+            blocks.forEach((block, index) => {
+                const color = colorMap[block] || '#808080';
+                ctx.fillStyle = color;
+                ctx.fillRect((header.length + index) * width, 0, width, height);
+            });
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'binary_image.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function colorDistance(c1, c2) {
+            return Math.sqrt(
+                Math.pow(c1.r - c2.r, 2) +
+                Math.pow(c1.g - c2.g, 2) +
+                Math.pow(c1.b - c2.b, 2)
+            );
+        }
+
+        function decode() {
+            const file = document.getElementById('imageFile').files[0];
+            if (!file) {
+                return;
+            }
+
+            const img = new Image();
+            img.onload = function() {
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                tempCtx.drawImage(img, 0, 0);
+
+                // 1ブロック目から横幅を検出
+                const firstPixel = tempCtx.getImageData(5, 25, 1, 1).data;
+                const firstColor = { r: firstPixel[0], g: firstPixel[1], b: firstPixel[2] };
+                
+                const widthColorMap = {
+                    '#FFFFFF': 10,
+                    '#000000': 15,
+                    '#800080': 20,
+                    '#0000FF': 25,
+                    '#00FF00': 30
+                };
+
+                // 最も近い色を見つけて横幅を決定
+                let blockWidth = 10;
+                let minDist = Infinity;
+                Object.entries(widthColorMap).forEach(([color, width]) => {
+                    const dist = colorDistance(firstColor, hexToRgb(color));
+                    if (dist < minDist) {
+                        minDist = dist;
+                        blockWidth = width;
+                    }
+                });
+
+                // 2-5ブロック目から色マッピングを読み取る
+                const colorMap = {};
+                const positions = ['00', '01', '11', '10'];
+                
+                for (let i = 0; i < 4; i++) {
+                    const x = (i + 1) * blockWidth + blockWidth / 2;
+                    const pixel = tempCtx.getImageData(x, 25, 1, 1).data;
+                    colorMap[positions[i]] = {
+                        r: pixel[0],
+                        g: pixel[1],
+                        b: pixel[2]
+                    };
+                }
+
+                // 検出情報を表示
+                document.getElementById('detectedInfo').style.display = 'block';
+                document.getElementById('detectedWidth').textContent = `横幅: ${blockWidth}px`;
+                document.getElementById('detectedColors').innerHTML = 
+                    `色設定: <br>` +
+                    `00 = ${rgbToHex(colorMap['00'].r, colorMap['00'].g, colorMap['00'].b)}<br>` +
+                    `01 = ${rgbToHex(colorMap['01'].r, colorMap['01'].g, colorMap['01'].b)}<br>` +
+                    `11 = ${rgbToHex(colorMap['11'].r, colorMap['11'].g, colorMap['11'].b)}<br>` +
+                    `10 = ${rgbToHex(colorMap['10'].r, colorMap['10'].g, colorMap['10'].b)}`;
+
+                // 6ブロック目以降のデータを読み取る
+                let result = '';
+                for (let x = 5 * blockWidth; x < img.width; x += blockWidth) {
+                    const imageData = tempCtx.getImageData(x + blockWidth / 2, 25, 1, 1).data;
+                    const pixelColor = { r: imageData[0], g: imageData[1], b: imageData[2] };
+
+                    let closestMatch = '00';
+                    let minDistance = Infinity;
+
+                    Object.entries(colorMap).forEach(([key, targetColor]) => {
+                        const dist = colorDistance(pixelColor, targetColor);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestMatch = key;
+                        }
+                    });
+
+                    result += closestMatch;
+                }
+
+                document.getElementById('decodedOutput').value = result;
+            };
+
+            img.src = URL.createObjectURL(file);
+        }
+    </script>
+</body>
+</html>
