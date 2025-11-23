@@ -128,16 +128,16 @@
             
             <div class="info-box">
                 <h3>📋 画像形式の説明</h3>
-                <p><strong>最初の5ブロック（ヘッダー）:</strong></p>
+                <p><strong>最初の6ブロック（ヘッダー）:</strong></p>
                 <ul>
                     <li>1つ目: 横幅指定（10px=白, 15px=黒, 20px=紫, 25px=青, 30px=緑）</li>
                     <li>2つ目: 00に対応する色</li>
                     <li>3つ目: 01に対応する色</li>
                     <li>4つ目: 11に対応する色</li>
                     <li>5つ目: 10に対応する色</li>
-                    <li>スペース: 設定した色（ヘッダーには含まれません）</li>
+                    <li>6つ目: スペースに対応する色</li>
                 </ul>
-                <p><strong>6ブロック目以降:</strong> 実際のデータ</p>
+                <p><strong>7ブロック目以降:</strong> 実際のデータ</p>
             </div>
 
             <label>二進数を入力（0, 1, スペース）:</label>
@@ -256,16 +256,17 @@
                 }
             }
 
-            // ヘッダーブロックを追加（最初の5ブロック）
+            // ヘッダーブロックを追加（最初の6ブロック）
             const header = [
                 widthColorMap[width],  // 1. 横幅指定
                 colorMap['00'],         // 2. 00の色
                 colorMap['01'],         // 3. 01の色
                 colorMap['11'],         // 4. 11の色
-                colorMap['10']          // 5. 10の色
+                colorMap['10'],         // 5. 10の色
+                colorMap[' ']           // 6. スペースの色
             ];
 
-            // キャンバスサイズ設定（ヘッダー5ブロック + データブロック）
+            // キャンバスサイズ設定（ヘッダー6ブロック + データブロック）
             canvas.width = (header.length + blocks.length) * width;
             canvas.height = height;
 
@@ -335,11 +336,11 @@
                     }
                 });
 
-                // 2-5ブロック目から色マッピングを読み取る
+                // 2-6ブロック目から色マッピングを読み取る
                 const colorMap = {};
-                const positions = ['00', '01', '11', '10'];
+                const positions = ['00', '01', '11', '10', ' '];
                 
-                for (let i = 0; i < 4; i++) {
+                for (let i = 0; i < 5; i++) {
                     const x = (i + 1) * blockWidth + blockWidth / 2;
                     const pixel = tempCtx.getImageData(x, 25, 1, 1).data;
                     colorMap[positions[i]] = {
@@ -357,11 +358,12 @@
                     `00 = ${rgbToHex(colorMap['00'].r, colorMap['00'].g, colorMap['00'].b)}<br>` +
                     `01 = ${rgbToHex(colorMap['01'].r, colorMap['01'].g, colorMap['01'].b)}<br>` +
                     `11 = ${rgbToHex(colorMap['11'].r, colorMap['11'].g, colorMap['11'].b)}<br>` +
-                    `10 = ${rgbToHex(colorMap['10'].r, colorMap['10'].g, colorMap['10'].b)}`;
+                    `10 = ${rgbToHex(colorMap['10'].r, colorMap['10'].g, colorMap['10'].b)}<br>` +
+                    `スペース = ${rgbToHex(colorMap[' '].r, colorMap[' '].g, colorMap[' '].b)}`;
 
-                // 6ブロック目以降のデータを読み取る
+                // 7ブロック目以降のデータを読み取る
                 let result = '';
-                for (let x = 5 * blockWidth; x < img.width; x += blockWidth) {
+                for (let x = 6 * blockWidth; x < img.width; x += blockWidth) {
                     const imageData = tempCtx.getImageData(x + blockWidth / 2, 25, 1, 1).data;
                     const pixelColor = { r: imageData[0], g: imageData[1], b: imageData[2] };
 
